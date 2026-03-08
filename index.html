@@ -58,12 +58,12 @@
         const API_URL = 'https://script.google.com/macros/s/AKfycbzjDA6QU4S4HE-p1GeH3ebqM0vjzSDVU9mcUPBlG1_giU1WCyaoqnhc2LyrTuDnCCVc2A/exec';
         let currentSlide = 0, slideImages = [];
 
-        function getImageUrl(link) {
+       function getImageUrl(link) {
             if (!link) return 'https://via.placeholder.com/600x400?text=No+Image';
             let idMatch = link.match(/id=([^&]+)/) || link.match(/\/d\/([^/]+)/);
             if (idMatch) {
-                // رابط مباشر يتخطى مشاكل الكوكيز في الهواتف
-                return `https://docs.google.com/uc?export=view&id=${idMatch[1]}`;
+                // استخدام سيرفرات المحتوى المباشرة من جوجل (الأسرع والأكثر توافقاً مع الهواتف)
+                return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
             }
             return link;
         }
@@ -129,3 +129,4 @@
     </script>
 </body>
 </html>
+
