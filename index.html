@@ -99,14 +99,20 @@
         let slideImages = [];
 
         // الدالة المحدثة لسحب الصور تعمل على جميع الأجهزة
-        function getImageUrl(link) {
+       function getImageUrl(link) {
             if (!link) return 'https://via.placeholder.com/600x400?text=No+Image';
-            let idMatch = link.match(/id=([^&]+)/) || link.match(/\/d\/([^/]+)/);
-            if (idMatch) {
-                // خوادم جوجل المباشرة للصور (تحل مشاكل الموبايل)
-                return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
+            
+            // استخراج معرف الصورة (ID) بشكل دقيق
+            let fileId = "";
+            let parts = link.match(/(?:id=|\/d\/|src=)([\w-]+)/);
+            if (parts && parts[1]) {
+                fileId = parts[1];
+            } else {
+                return link; // إذا لم يجد ID يعيد الرابط الأصلي
             }
-            return link;
+
+            // هذا الرابط هو الأكثر توافقاً مع متصفحات الموبايل والكمبيوتر حالياً
+            return `https://drive.google.com/uc?export=view&id=${fileId}`;
         }
 
         fetch(API_URL).then(res => res.json()).then(data => {
@@ -197,3 +203,4 @@
     </script>
 </body>
 </html>
+
