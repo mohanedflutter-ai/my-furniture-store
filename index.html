@@ -15,30 +15,25 @@
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
 
-        /* الكروت الرئيسية */
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; max-width: 1200px; margin: 20px auto; }
         .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; }
         .card-img { width: 100%; height: 180px; object-fit: cover; }
         .card-content { padding: 12px; }
 
-        /* المودال */
         .modal { display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
         .modal-content { background: #fff; width: 100%; max-width: 750px; margin: 0 auto; height: 100vh; overflow-y: auto; position: relative; }
         @media (min-width: 750px) { .modal-content { height: 90vh; margin: 5vh auto; border-radius: 20px; } }
 
-        /* السلايدر */
         .slider-wrapper { position: relative; width: 100%; height: 50vh; background: #f9f9f9; display: flex; align-items: center; justify-content: center; }
         .slider-img { width: 100%; height: 100%; object-fit: contain; display: none; }
         .slider-img.active { display: block; }
         .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.7); border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; z-index: 10; }
         .prev { right: 10px; } .next { left: 10px; }
 
-        /* تفاصيل الأسعار */
         .details-container { padding: 20px; }
         .price-breakdown { background: #fdfdfd; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .price-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         
-        /* صندوق الإجمالي المعدل */
         .total-grid { 
             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
             background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center;
@@ -114,6 +109,10 @@
                 const name = item[findKey('اسم المنتج')];
                 if (!name) return;
                 const imgs = (item[findKey('صور المنتج')] || "").split(',');
+                
+                // حساب السعر بالآلاف للعرض في الكرت
+                const priceSDG = Math.round((item[findKey('التكلفة بالجنيه')] || 0) * 1000);
+
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.onclick = () => openModal(item, headers);
@@ -121,7 +120,7 @@
                     <img class="card-img" src="${getImageUrl(imgs[0].trim(), 'w400')}">
                     <div class="card-content">
                         <div style="font-weight:bold; font-size:0.95em;">${name}</div>
-                        <div style="color:var(--danger); font-weight:bold; margin-top:5px;">${Math.round(item[findKey('التكلفة بالجنيه')] || 0).toLocaleString()} ج.س</div>
+                        <div style="color:var(--danger); font-weight:bold; margin-top:5px;">${priceSDG.toLocaleString()} ج.س</div>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -133,25 +132,26 @@
             slideImages = (item[findKey('صور المنتج')] || "").split(',').filter(s => s.trim() !== "");
             currentSlide = 0;
 
-            const pSDG = parseFloat(item[findKey('التكلفة بالجنيه')] || 0);
+            const pSDG_raw = parseFloat(item[findKey('التكلفة بالجنيه')] || 0);
             const pUSD = parseFloat(item[findKey('التكلفة بالدولار')] || 0);
             const pCNY = parseFloat(item[findKey('يوان')] || item[findKey('RMB')] || 0);
             const sUSD = parseFloat(item[findKey('شحن')] || 0);
 
             const totalUSD = pUSD + sUSD;
-            const exRateUSD_SDG = pUSD > 0 ? (pSDG / pUSD) : 0;
-            const totalSDG = totalUSD * exRateUSD_SDG;
+            const exRateUSD_SDG = pUSD > 0 ? (pSDG_raw / pUSD) : 0;
+            
+            // تحويل للآلاف (ضرب في 1000)
+            const pSDG_final = Math.round(pSDG_raw * 1000);
+            const totalSDG_final = Math.round((totalUSD * exRateUSD_SDG) * 1000);
 
             document.getElementById('modalTitle').innerText = item[findKey('اسم المنتج')];
             document.getElementById('modalShop').innerText = "🏬 " + (item[findKey('المحل')] || item[findKey('اسم المحل')]);
             
-            document.getElementById('pOriginal').innerText = `${Math.round(pSDG).toLocaleString()} ج.س ($${pUSD.toFixed(2)})`;
+            document.getElementById('pOriginal').innerText = `${pSDG_final.toLocaleString()} ج.س ($${pUSD.toFixed(2)})`;
             document.getElementById('pShipping').innerText = `$${sUSD.toFixed(2)}`;
             
-            document.getElementById('tSDG').innerText = Math.round(totalSDG).toLocaleString();
+            document.getElementById('tSDG').innerText = totalSDG_final.toLocaleString();
             document.getElementById('tUSD').innerText = "$" + totalUSD.toFixed(2);
-            
-            // اليوان يظهر القيمة الأصلية فقط كما طلبت
             document.getElementById('tCNY').innerText = "¥" + pCNY.toLocaleString();
 
             document.getElementById('modalInfo').innerHTML = `
@@ -186,5 +186,4 @@
         function closeModal() { document.getElementById('productModal').style.display = 'none'; }
     </script>
 </body>
-
 </html>
