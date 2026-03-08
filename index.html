@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستشار المشتريات | غوانزو</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #d35400;
+            --success: #27ae60;
+            --danger: #c0392b;
+            --bg: #f4f7f6;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+
+        /* الكروت الرئيسية */
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; max-width: 1200px; margin: 20px auto; }
+        .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; }
+        .card-img { width: 100%; height: 180px; object-fit: cover; }
+        .card-content { padding: 12px; }
+
+        /* المودال */
+        .modal { display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+        .modal-content { background: #fff; width: 100%; max-width: 750px; margin: 0 auto; height: 100vh; overflow-y: auto; position: relative; }
+        @media (min-width: 750px) { .modal-content { height: 90vh; margin: 5vh auto; border-radius: 20px; } }
+
+        /* السلايدر */
+        .slider-wrapper { position: relative; width: 100%; height: 50vh; background: #f9f9f9; display: flex; align-items: center; justify-content: center; }
+        .slider-img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .slider-img.active { display: block; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.7); border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; z-index: 10; }
+        .prev { right: 10px; } .next { left: 10px; }
+
+        /* تفاصيل الأسعار */
+        .details-container { padding: 20px; }
+        .price-breakdown { background: #fdfdfd; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .price-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        
+        /* صندوق الإجمالي المعدل */
+        .total-grid { 
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+            background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center;
+        }
+        .total-item { display: flex; flex-direction: column; }
+        .total-item small { opacity: 0.8; font-size: 0.75em; margin-bottom: 5px; }
+        .total-item span { font-weight: bold; font-size: 1.1em; }
+        .border-l { border-left: 1px solid rgba(255,255,255,0.1); }
+
+        .close-modal { position: absolute; top: 15px; left: 15px; z-index: 2100; background: #fff; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .loader { text-align: center; padding: 100px; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="loader">جاري معالجة تفاصيل الأسعار... ⏳</div>
+    <div id="products-grid" class="products-grid"></div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">✕</button>
+            <div class="slider-wrapper" id="sliderWrapper">
+                <button class="nav-btn prev" onclick="changeSlide(1)">❯</button>
+                <button class="nav-btn next" onclick="changeSlide(-1)">❮</button>
+            </div>
+
+            <div class="details-container">
+                <h2 id="modalTitle" style="margin:0;"></h2>
+                <div id="modalShop" style="color:var(--accent); font-weight:bold; margin-bottom:15px;"></div>
+
+                <div class="price-breakdown">
+                    <div class="price-row"><span>سعر المنتج (الأصل)</span> <span id="pOriginal"></span></div>
+                    <div class="price-row"><span>تكلفة الشحن</span> <span id="pShipping" style="color:var(--accent);"></span></div>
+                </div>
+
+                <div class="total-grid">
+                    <div class="total-item">
+                        <small>الإجمالي (سوداني)</small>
+                        <span id="tSDG" style="color:#ff7675;"></span>
+                    </div>
+                    <div class="total-item border-l">
+                        <small>الإجمالي (دولار)</small>
+                        <span id="tUSD" style="color:#55efc4;"></span>
+                    </div>
+                    <div class="total-item border-l">
+                        <small>سعر المنتج (يوان)</small> <span id="tCNY" style="color:#ffeaa7;"></span>
+                    </div>
+                </div>
+
+                <div id="modalInfo" style="margin-top:20px; line-height:1.7; border-top:1px solid #eee; padding-top:15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzjDA6QU4S4HE-p1GeH3ebqM0vjzSDVU9mcUPBlG1_giU1WCyaoqnhc2LyrTuDnCCVc2A/exec';
+        let currentSlide = 0;
+        let slideImages = [];
+
+        function getImageUrl(link, size = "w1000") {
+            if (!link) return 'https://via.placeholder.com/600x400?text=No+Image';
+            let idMatch = link.match(/id=([^&]+)/);
+            return idMatch ? `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=${size}` : link;
+        }
+
+        fetch(API_URL).then(res => res.json()).then(data => {
+            document.getElementById('loader').style.display = 'none';
+            const grid = document.getElementById('products-grid');
+            const headers = Object.keys(data[0]);
+            const findKey = (w) => headers.find(h => h.includes(w));
+
+            data.reverse().forEach(item => {
+                const name = item[findKey('اسم المنتج')];
+                if (!name) return;
+                const imgs = (item[findKey('صور المنتج')] || "").split(',');
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.onclick = () => openModal(item, headers);
+                card.innerHTML = `
+                    <img class="card-img" src="${getImageUrl(imgs[0].trim(), 'w400')}">
+                    <div class="card-content">
+                        <div style="font-weight:bold; font-size:0.95em;">${name}</div>
+                        <div style="color:var(--danger); font-weight:bold; margin-top:5px;">${Math.round(item[findKey('التكلفة بالجنيه')] || 0).toLocaleString()} ج.س</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+
+        function openModal(item, headers) {
+            const findKey = (w) => headers.find(h => h.includes(w));
+            slideImages = (item[findKey('صور المنتج')] || "").split(',').filter(s => s.trim() !== "");
+            currentSlide = 0;
+
+            const pSDG = parseFloat(item[findKey('التكلفة بالجنيه')] || 0);
+            const pUSD = parseFloat(item[findKey('التكلفة بالدولار')] || 0);
+            const pCNY = parseFloat(item[findKey('يوان')] || item[findKey('RMB')] || 0);
+            const sUSD = parseFloat(item[findKey('شحن')] || 0);
+
+            const totalUSD = pUSD + sUSD;
+            const exRateUSD_SDG = pUSD > 0 ? (pSDG / pUSD) : 0;
+            const totalSDG = totalUSD * exRateUSD_SDG;
+
+            document.getElementById('modalTitle').innerText = item[findKey('اسم المنتج')];
+            document.getElementById('modalShop').innerText = "🏬 " + (item[findKey('المحل')] || item[findKey('اسم المحل')]);
+            
+            document.getElementById('pOriginal').innerText = `${Math.round(pSDG).toLocaleString()} ج.س ($${pUSD.toFixed(2)})`;
+            document.getElementById('pShipping').innerText = `$${sUSD.toFixed(2)}`;
+            
+            document.getElementById('tSDG').innerText = Math.round(totalSDG).toLocaleString();
+            document.getElementById('tUSD').innerText = "$" + totalUSD.toFixed(2);
+            
+            // اليوان يظهر القيمة الأصلية فقط كما طلبت
+            document.getElementById('tCNY').innerText = "¥" + pCNY.toLocaleString();
+
+            document.getElementById('modalInfo').innerHTML = `
+                <p><b>الماركة:</b> ${item[findKey('الماركة')] || '-'}</p>
+                <p><b>WeChat:</b> ${item[findKey('WeChat')] || '-'}</p>
+                <p><b>ملاحظات:</b> ${item[findKey('ملاحظات')] || 'لا توجد'}</p>
+            `;
+
+            setupSlider();
+            document.getElementById('productModal').style.display = 'block';
+        }
+
+        function setupSlider() {
+            const wrapper = document.getElementById('sliderWrapper');
+            wrapper.querySelectorAll('.slider-img').forEach(img => img.remove());
+            slideImages.forEach((link, idx) => {
+                const img = document.createElement('img');
+                img.src = getImageUrl(link.trim(), "w1000");
+                img.className = `slider-img ${idx === 0 ? 'active' : ''}`;
+                wrapper.appendChild(img);
+            });
+        }
+
+        function changeSlide(n) {
+            const imgs = document.querySelectorAll('.slider-img');
+            if (imgs.length <= 1) return;
+            imgs[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + n + imgs.length) % imgs.length;
+            imgs[currentSlide].classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('productModal').style.display = 'none'; }
+    </script>
+</body>
+</html>
