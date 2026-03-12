@@ -99,7 +99,7 @@
         let slideImages = [];
 
         // الدالة النهائية والمدمرة لمشاكل الموبايل
-        function getImageUrl(link) {
+       function getImageUrl(link) {
             if (!link) return 'https://via.placeholder.com/600x400?text=No+Image';
             
             let fileId = "";
@@ -110,9 +110,9 @@
                 return link;
             }
 
-            // استخدام بروكسي الصور السريع (wsrv.nl) لجلب الصورة من جوجل وعرضها على الموبايل بدون أي حظر
-            let googleDriveLink = `https://drive.google.com/uc?export=view&id=${fileId}`;
-            return `https://wsrv.nl/?url=${encodeURIComponent(googleDriveLink)}&w=800`;
+            // الحل المستقر: استخدام نظام الـ Thumbnail الخاص بجوجل درايف
+            // sz=w1000 تعني جلب الصورة بعرض 1000 بيكسل لضمان جودتها
+            return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
         }
 
         fetch(API_URL).then(res => res.json()).then(data => {
@@ -203,3 +203,4 @@
     </script>
 </body>
 </html>
+
