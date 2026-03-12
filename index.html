@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>برنامج المشتريات | غوانزو</title>
+    <meta name="referrer" content="no-referrer"> <title>برنامج المشتريات | غوانزو</title>
     <style>
         :root {
             --primary: #2c3e50;
@@ -98,21 +98,21 @@
         let currentSlide = 0;
         let slideImages = [];
 
-        // الدالة المحدثة لسحب الصور تعمل على جميع الأجهزة
-       function getImageUrl(link) {
+        // الدالة النهائية والمدمرة لمشاكل الموبايل
+        function getImageUrl(link) {
             if (!link) return 'https://via.placeholder.com/600x400?text=No+Image';
             
-            // استخراج معرف الصورة (ID) بشكل دقيق
             let fileId = "";
             let parts = link.match(/(?:id=|\/d\/|src=)([\w-]+)/);
             if (parts && parts[1]) {
                 fileId = parts[1];
             } else {
-                return link; // إذا لم يجد ID يعيد الرابط الأصلي
+                return link;
             }
 
-            // هذا الرابط هو الأكثر توافقاً مع متصفحات الموبايل والكمبيوتر حالياً
-            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+            // استخدام بروكسي الصور السريع (wsrv.nl) لجلب الصورة من جوجل وعرضها على الموبايل بدون أي حظر
+            let googleDriveLink = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            return `https://wsrv.nl/?url=${encodeURIComponent(googleDriveLink)}&w=800`;
         }
 
         fetch(API_URL).then(res => res.json()).then(data => {
@@ -126,14 +126,14 @@
                 if (!name) return;
                 const imgs = (item[findKey('صور المنتج')] || "").split(',');
                 
-                // حساب السعر السوداني مضروباً في 1000
                 const priceSDG = Math.round((item[findKey('التكلفة بالجنيه')] || 0) * 1000);
 
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.onclick = () => openModal(item, headers);
+                // تمت إضافة referrerpolicy="no-referrer" لحماية الصورة على الموبايل
                 card.innerHTML = `
-                    <img class="card-img" src="${getImageUrl(imgs[0].trim())}" loading="lazy">
+                    <img class="card-img" src="${getImageUrl(imgs[0].trim())}" loading="lazy" referrerpolicy="no-referrer">
                     <div class="card-content">
                         <div style="font-weight:bold; font-size:0.95em;">${name}</div>
                         <div style="color:var(--danger); font-weight:bold; margin-top:5px;">${priceSDG.toLocaleString()} ج.س</div>
@@ -156,7 +156,6 @@
             const totalUSD = pUSD + sUSD;
             const exRateUSD_SDG = pUSD > 0 ? (pSDG_raw / pUSD) : 0;
             
-            // ضرب الأسعار السودانية في 1000
             const pSDG_final = Math.round(pSDG_raw * 1000);
             const totalSDG_final = Math.round((totalUSD * exRateUSD_SDG) * 1000);
 
@@ -187,6 +186,7 @@
                 const img = document.createElement('img');
                 img.src = getImageUrl(link.trim());
                 img.className = `slider-img ${idx === 0 ? 'active' : ''}`;
+                img.setAttribute('referrerpolicy', 'no-referrer'); // للحماية الإضافية داخل السلايدر
                 wrapper.appendChild(img);
             });
         }
@@ -203,4 +203,3 @@
     </script>
 </body>
 </html>
-
