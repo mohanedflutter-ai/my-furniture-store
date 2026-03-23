@@ -172,7 +172,7 @@
             document.getElementById('modalInfo').innerHTML = `
                 <p><b>الماركة:</b> ${item[findKey('الماركة')] || '-'}</p>
                 <p><b>WeChat:</b> ${item[findKey('WeChat')] || '-'}</p>
-                <p><b>ملاحظات:</b> ${(item[findKey('لاحظات إضافية')] || '').trim() || '_'}</p>
+                <p><b>ملاحظات:</b> ${String(item[findKey('لاحظات إضافية')] || '').trim() || '_'}</p>
             `;
 
             setupSlider();
